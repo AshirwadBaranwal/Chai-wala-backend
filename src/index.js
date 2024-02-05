@@ -9,6 +9,12 @@ dotenv.config({
 
 connectDB()
   .then(
+    app.on("error", () => {
+      console.log("App connection ERROR:", error);
+      throw err;
+    }),
+  )
+  .then(
     app.listen(process.env.PORT || 8000, () => {
       console.log(`app is listening on Port : ${process.env.PORT}`);
     }),
@@ -17,23 +23,6 @@ connectDB()
     console.log("MongoDB connection Failed:", error);
   });
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
 /*
 import mongoose from "mongoose";
 import { DB_NAME } from "./constants";

@@ -1,6 +1,6 @@
 import mongoose, { Schema } from "mongoose";
-import { Jwt } from "jsonwebtoken";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
+import Jwt from "jsonwebtoken";
 
 const userSchema = new Schema(
   {
@@ -19,25 +19,10 @@ const userSchema = new Schema(
       trim: true,
       unique: true,
     },
-    fullname: {
+    phone: {
       type: String,
       required: true,
-      trim: true,
-      index: true,
     },
-    avatar: {
-      type: String, // clodinary url
-      required: true,
-    },
-    coverImage: {
-      type: String,
-    },
-    watchHistory: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "Video",
-      },
-    ],
     password: {
       type: String,
       required: [true, "Password is required"],
@@ -47,14 +32,39 @@ const userSchema = new Schema(
 );
 
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
+  if (!this.isModified("password")) {
+    next();
+  }
 
-  this.password = bcrypt.hash(this.password, 10);
-  next();
+  try {
+    const saltround = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(this.password, saltround);
+    this.password = hashedPassword;
+  } catch (error) {
+    return next(error);
+  }
 });
 
-userSchema.methods.isPasswordCorrect = async function (password) {
-  return await bcrypt.compare(password, this.password);
+userSchema.methods.comparePassword = async function (password) {
+  return bcrypt.compare(password, this.password);
+};
+
+userSchema.methods.generateToken = async function () {
+  try {
+    return Jwt.sign(
+      {
+        userId: this._id.toString(),
+        email: this.email,
+        isAdmin: this.isAdmin,
+      },
+      process.env.JWT_SECRET_KEY,
+      {
+        expiresIn: "30d",
+      },
+    );
+  } catch (error) {
+    console.log("ERROR:", error);
+  }
 };
 
 export const User = mongoose.model("User", userSchema);
